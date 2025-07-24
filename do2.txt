@@ -1,0 +1,212 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+#define MAX_STACK_SIZE 100
+
+typedef struct {
+    int top;
+    int items[MAX_STACK_SIZE];
+} Stack;
+
+void push(Stack *stack, int item) {
+    if (stack->top == MAX_STACK_SIZE - 1) {
+        printf("Stack overflow\n");
+        exit(1);
+    }
+    stack->items[++stack->top] = item;
+}
+
+int pop(Stack *stack) {
+    if (stack->top == -1) {
+        printf("Stack underflow\n");
+        exit(1);
+    }
+    return stack->items[stack->top--];
+}
+
+int isEmpty(Stack *stack) {
+    return stack->top == -1;
+}
+
+int precedence(char c) {
+    return (c == '+' || c == '-') ? 1 : ((c == '*' || c == '/' || c == '%') ? 2 : 0);
+}
+
+void infixToPostfix(char *infix, char *postfix) {
+    Stack stack = {.top = -1};
+    int j = 0;
+
+    for (int i = 0; infix[i] != '\0'; i++) {
+        char c = infix[i];
+
+        if (isspace(c)) {
+            continue;
+        } else if (isdigit(c)) {
+            int operand = 0;
+            while (isdigit(infix[i])) {
+                operand = operand * 10 + (infix[i++] - '0');
+            }
+            j += sprintf(postfix + j, "%d ", operand);
+            i--; // Adjust the index after the number
+        } else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%') {
+            postfix[j++] = ' ';
+            while (!isEmpty(&stack) && precedence(stack.items[stack.top]) >= precedence(c)) {
+                postfix[j++] = pop(&stack);
+                postfix[j++] = ' ';
+            }
+            push(&stack, c);
+        } else if (c == '(') {
+            push(&stack, c);
+        } else if (c == ')') {
+            while (!isEmpty(&stack) && stack.items[stack.top] != '(') {
+                postfix[j++] = ' ';
+                postfix[j++] = pop(&stack);
+                postfix[j++] = ' ';
+            }
+            pop(&stack); // Pop the opening parenthesis
+        } else {
+            postfix[j++] = c;
+        }
+    }
+
+    while (!isEmpty(&stack)) {
+        postfix[j++] = ' ';
+        postfix[j++] = pop(&stack);
+        postfix[j++] = ' ';
+    }
+
+    postfix[j] = '\0';
+}
+
+int evaluatePostfix(char *postfix) {
+    Stack stack = {.top = -1};
+    int operand, operand1, operand2;
+
+    for (int i = 0; postfix[i] != '\0'; i++) {
+        char c = postfix[i];
+
+        if (isdigit(c)) {
+            operand = 0;
+            while (isdigit(postfix[i])) {
+                operand = operand * 10 + (postfix[i++] - '0');
+            }
+            push(&stack, operand);
+            i--; // Adjust the index after the number
+        } else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%') {
+            operand2 = pop(&stack);
+            operand1 = pop(&stack);
+
+            switch (c) {
+                case '+': push(&stack, operand1 + operand2); break;
+                case '-': push(&stack, operand1 - operand2); break;
+                case '*': push(&stack, operand1 * operand2); break;
+                case '/': if (operand2 != 0) push(&stack, operand1 / operand2); else { printf("Error: Division by zero\n"); exit(1); } break;
+                case '%': if (operand2 != 0) push(&stack, operand1 % operand2); else { printf("Error: Modulus by zero\n"); exit(1); } break;
+            }
+        }
+    }
+
+    return pop(&stack);
+}
+
+void readFromFile(char *filename, char expressions[][100], int *numExpressions) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Error opening file: %s\n", filename);
+        exit(1);
+    }
+
+    *numExpressions = 0;
+    while (fscanf(file, " %[^\n]s", expressions[*numExpressions]) != EOF) {
+        (*numExpressions)++;
+    }
+
+    fclose(file);
+}
+
+void printExpressions(char expressions[][100], int numExpressions) {
+    printf("Expressions in the file:\n");
+    for (int i = 0; i < numExpressions; i++) {
+        printf("%d. %s\n", i + 1, expressions[i]);
+    }
+}
+
+void saveToFile(char *filename, char *postfix, int result) {
+    FILE *file = fopen(filename, "a");
+    if (!file) {
+        printf("Error opening file: %s\n", filename);
+        exit(1);
+    }
+
+    fprintf(file, "Postfix expression: %s\nResult: %d\n--------------------------\n", postfix, result);
+
+    fclose(file);
+}
+
+int main() {
+    Stack stack = {.top = -1};
+    char expressions[100][100];
+    int numExpressions = 0;
+
+    int choice;
+    do {
+        printf("\nMenu:\n1. Read equations from input.txt\n2. Print equations\n3. Evaluate expressions\n"
+               "4. Print postfix expressions\n5. Save to output file\n6. Exit\nEnter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                readFromFile("input.txt", expressions, &numExpressions);
+                printf("Read %d equations from input.txt\n", numExpressions);
+                break;
+            case 2:
+                printExpressions(expressions, numExpressions);
+                break;
+            case 3:
+                for (int i = 0; i < numExpressions; i++) {
+                    char postfix[100];
+                    infixToPostfix(expressions[i], postfix);
+                    printf("Result: %d\n", evaluatePostfix(postfix));
+                }
+                break;
+            case 4:
+                for (int i = 0; i < numExpressions; i++) {
+                    char postfix[100];
+                    infixToPostfix(expressions[i], postfix);
+                    printf("Postfix expression: %s\n", postfix);
+                }
+                break;
+            case 5:
+                if (numExpressions == 0) {
+                    printf("No expressions available. Please read equations from input.txt first.\n");
+                    break;
+                }
+
+                FILE *outputFile = fopen("output.txt", "a");
+                if (!outputFile) {
+                    printf("Error opening output file: output.txt\n");
+                    exit(1);
+                }
+
+                for (int i = 0; i < numExpressions; i++) {
+                    char postfix[100];
+                    infixToPostfix(expressions[i], postfix);
+                    int result = evaluatePostfix(postfix);
+                    fprintf(outputFile, "Expression: %s\nPostfix expression: %s\nResult: %d\n--------------------------\n",
+                            expressions[i], postfix, result);
+                }
+
+                fclose(outputFile);
+                printf("Results saved to output.txt\n");
+                break;
+            case 6:
+                printf("Exiting program.\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 6);
+
+    return 0;
+}

@@ -1,0 +1,514 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_TESTS 1000
+
+// Structure to represent a medical test
+struct MedicalTest {
+    int patientID;
+    char testName[50];
+    char testDate[8];
+    float result;
+};
+
+// Global variables
+struct MedicalTest medicalTests[MAX_TESTS];
+int testCount = 0;
+
+// Function prototypes
+void readTestDataFromFile();
+void writeTestDataToFile();
+void displayMenu();
+void addNewTest();
+void searchByPatientID();
+void searchUnnormalTests();
+void calculateAverage();
+void updateTestResult();
+void deleteTest();
+void displayAllTests();
+
+int main() {
+    readTestDataFromFile();
+
+    int choice;
+    do {
+        displayMenu();
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addNewTest();
+                break;
+            case 2:
+                searchByPatientID();
+                break;
+            case 3:
+                searchUnnormalTests();
+                break;
+            case 4:
+                calculateAverage();
+                break;
+            case 5:
+                updateTestResult();
+                break;
+            case 6:
+                deleteTest();
+                break;
+            case 7:
+                displayAllTests();
+                break;
+            case 0:
+                writeTestDataToFile();
+                printf("Exiting program.\n");
+                break;
+            default:
+                printf("Invalid choice. Please enter a number from 0 to 7.\n");
+        }
+    } while (choice != 0);
+
+    return 0;
+}
+
+void readTestDataFromFile() {
+    FILE *file = fopen("medical.txt", "r");
+    if (file == NULL) {
+        printf("Error: Unable to open file for reading.\n");
+        exit(1); // Terminate the program
+    }
+
+    while (fscanf(file, "%d: %49[^,], %7[^,], %f\n", &medicalTests[testCount].patientID, medicalTests[testCount].testName, medicalTests[testCount].testDate, &medicalTests[testCount].result) == 4) {
+        testCount++;
+        if (testCount >= MAX_TESTS) {
+            printf("Maximum test count exceeded. Aborting read operation.\n");
+            break;
+        }
+    }
+
+    fclose(file);
+}
+
+void writeTestDataToFile() {
+    FILE *file = fopen("medical.txt", "w");
+    if (file == NULL) {
+        printf("Error: Unable to open file for writing.\n");
+        exit(1); // Terminate the program
+    }
+
+    for (int i = 0; i < testCount; i++) {
+        fprintf(file, "%d: %s, %s, %.2f\n", medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].testDate, medicalTests[i].result);
+    }
+
+    fclose(file);
+}
+
+void displayMenu() {
+    printf("\nMedical Test Management System Menu\n");
+    printf("1. Add a new medical test\n");
+    printf("2. Search for a test by patient ID\n");
+    printf("3. Search for unnormal tests\n");
+    printf("4. Calculate average test value\n");
+    printf("5. Update an existing test result\n");
+    printf("6. Delete a test\n");
+    printf("7. Display all tests\n");
+    printf("0. Exit\n");
+}
+
+void addNewTest() {
+    if (testCount >= MAX_TESTS) {
+        printf("Cannot add new test. Maximum test limit reached.\n");
+        return;
+    }
+
+    struct MedicalTest newTest;
+
+    // Input patient ID with validation
+    printf("Enter patient ID (7 digits): ");
+    if (scanf("%d", &newTest.patientID) != 1 || newTest.patientID < 1000000 || newTest.patientID > 9999999) {
+        printf("Error: Invalid patient ID. Please enter a 7-digit number.\n");
+        // Clear input buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    printf("Choose the test:\n");
+    printf("1. Hemoglobin (Hgb)\n");
+    printf("2. Blood Glucose Test (BGT)\n");
+    printf("3. LDL Cholesterol Low-Density Lipoprotein (LDL)\n");
+    printf("4. Blood Pressure Test (BPT)\n");
+    printf("Enter your choice (1-4): ");
+    int testChoice;
+    if (scanf("%d", &testChoice) != 1 || testChoice < 1 || testChoice > 4) {
+        printf("Error: Invalid choice. Please enter a number between 1 and 4.\n");
+        // Clear input buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    // Set test name based on choice
+    switch (testChoice) {
+        case 1:
+            strcpy(newTest.testName, "Hgb");
+            break;
+        case 2:
+            strcpy(newTest.testName, "BGT");
+            break;
+        case 3:
+            strcpy(newTest.testName, "LDL");
+            break;
+        case 4:
+            strcpy(newTest.testName, "BPT");
+            break;
+    }
+
+    // Input test date with validation
+    printf("Enter test date (YYYY-MM): ");
+    if (scanf("%7s", newTest.testDate) != 1 || (strlen(newTest.testDate) != 7 || newTest.testDate[4] != '-') ||
+        (newTest.testDate[0] < '0' || newTest.testDate[0] > '9') ||
+        (newTest.testDate[1] < '0' || newTest.testDate[1] > '9') ||
+        (newTest.testDate[2] < '0' || newTest.testDate[2] > '9') ||
+        (newTest.testDate[3] < '0' || newTest.testDate[3] > '9') ||
+        (newTest.testDate[5] < '0' || newTest.testDate[5] > '1') ||
+        (newTest.testDate[6] < '0' || newTest.testDate[6] > '9')) {
+        printf("Error: Invalid test date. Please enter a valid date in the format YYYY-MM.\n");
+        // Clear input buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    printf("Enter test result: ");
+    scanf("%f", &newTest.result);
+
+    // Add the new test to the array
+    medicalTests[testCount++] = newTest;
+    printf("Test added successfully.\n");
+
+    // Write updated data to file
+    writeTestDataToFile();
+}
+
+
+void searchByPatientID() {
+    int searchID;
+    int foundID = 0; // Flag to check if the patient ID is found
+
+    printf("Enter patient ID to search (7 digits): ");
+    while (scanf("%d", &searchID) != 1 || searchID < 1000000 || searchID > 9999999) {
+        printf("Error: Invalid patient ID. Please enter a 7-digit number: ");
+        while (getchar() != '\n'); // Clear input buffer
+    }
+
+    // Check if the entered ID is available
+    for (int i = 0; i < testCount; i++) {
+        if (medicalTests[i].patientID == searchID) {
+            foundID = 1;
+            break;
+        }
+    }
+
+    if (!foundID) {
+        printf("Patient ID %d not found in records.\n", searchID);
+        return;
+    }
+
+    int choice;
+    do {
+        printf("\nSearch Options:\n");
+        printf("1. Retrieve all patient tests\n");
+        printf("2. Retrieve all abnormal patient tests\n");
+        printf("3. Retrieve all patient tests in a given specific period\n");
+        printf("4. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Patient Tests:\n");
+                for (int i = 0; i < testCount; i++) {
+                    if (medicalTests[i].patientID == searchID) {
+                        printf("Test Name: %s, Test Date: %s, Result: %.2f\n",
+                               medicalTests[i].testName, medicalTests[i].testDate, medicalTests[i].result);
+                    }
+                }
+                break;
+            case 2:
+                printf("Abnormal Patient Tests:\n");
+                float hgbMin = 13.8, hgbMax = 17.2;
+                float bgtMin = 70, bgtMax = 99;
+                float ldlMax = 100;
+                float systolicMax = 120, diastolicMax = 80;
+
+                for (int i = 0; i < testCount; i++) {
+                    if (medicalTests[i].patientID == searchID) {
+                        if (strcmp(medicalTests[i].testName, "Hgb") == 0) {
+                            if (medicalTests[i].result < hgbMin || medicalTests[i].result > hgbMax) {
+                                printf("Test Name: %s, Result: %.2f\n",
+                                       medicalTests[i].testName, medicalTests[i].result);
+                            }
+                        } else if (strcmp(medicalTests[i].testName, "BGT") == 0) {
+                            if (medicalTests[i].result < bgtMin || medicalTests[i].result > bgtMax) {
+                                printf("Test Name: %s, Result: %.2f\n",
+                                       medicalTests[i].testName, medicalTests[i].result);
+                            }
+                        } else if (strcmp(medicalTests[i].testName, "LDL") == 0) {
+                            if (medicalTests[i].result >= ldlMax) {
+                                printf("Test Name: %s, Result: %.2f\n",
+                                       medicalTests[i].testName, medicalTests[i].result);
+                            }
+                        } else if (strcmp(medicalTests[i].testName, "BPT") == 0) {
+                            float systolicBP = (int)medicalTests[i].result;
+                            float diastolicBP = medicalTests[i].result - systolicBP;
+                            if (systolicBP >= systolicMax || diastolicBP >= diastolicMax) {
+                                printf("Test Name: %s, Result: %.2f\n",
+                                       medicalTests[i].testName, medicalTests[i].result);
+                            }
+                        }
+                    }
+                }
+
+                break;
+            case 3:
+                printf("Enter start date (YYYY-MM): ");
+                char startDate[8];
+                scanf("%s", startDate);
+                printf("Enter end date (YYYY-MM): ");
+                char endDate[8];
+                scanf("%s", endDate);
+                printf("Patient Tests in Period:\n");
+
+                for (int i = 0; i < testCount; i++) {
+                    if (medicalTests[i].patientID == searchID && strcmp(medicalTests[i].testDate, startDate) >= 0 && strcmp(medicalTests[i].testDate, endDate) <= 0) {
+                        printf("Test Name: %s, Test Date: %s, Result: %.2f\n",
+                               medicalTests[i].testName, medicalTests[i].testDate, medicalTests[i].result);
+                    }
+                }
+
+                break;
+            case 4:
+                printf("Exiting program.\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 4);
+}
+
+
+
+void searchUnnormalTests() {
+    printf("Searching for abnormal tests:\n");
+    int found = 0;
+
+    // Define normal ranges for each test
+    float hgbMin = 13.8, hgbMax = 17.2;
+    float bgtMin = 70, bgtMax = 99;
+    float ldlMax = 100;
+    float systolicMax = 120, diastolicMax = 80;
+
+    // Iterate through tests and check if they are abnormal
+    for (int i = 0; i < testCount; i++) {
+        if (strcmp(medicalTests[i].testName, "Hgb") == 0) {
+            if (medicalTests[i].result < hgbMin || medicalTests[i].result > hgbMax) {
+                printf("Patient ID: %d, Test Name: %s, Result: %.2f\n",
+                       medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].result);
+                found = 1;
+            }
+        } else if (strcmp(medicalTests[i].testName, "BGT") == 0) {
+            if (medicalTests[i].result < bgtMin || medicalTests[i].result > bgtMax) {
+                printf("Patient ID: %d, Test Name: %s, Result: %.2f\n",
+                       medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].result);
+                found = 1;
+            }
+        } else if (strcmp(medicalTests[i].testName, "LDL") == 0) {
+            if (medicalTests[i].result >= ldlMax) {
+                printf("Patient ID: %d, Test Name: %s, Result: %.2f\n",
+                       medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].result);
+                found = 1;
+            }
+        } else if (strcmp(medicalTests[i].testName, "BPT") == 0) {
+            // Assuming systolic and diastolic blood pressure are stored separately in the result field
+            float systolicBP = (int)medicalTests[i].result;
+            float diastolicBP = medicalTests[i].result - systolicBP;
+
+            if (systolicBP >= systolicMax || diastolicBP >= diastolicMax) {
+                printf("Patient ID: %d, Test Name: %s, Result: %.2f\n",
+                       medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].result);
+                found = 1;
+            }
+        }
+    }
+
+    if (!found) {
+        printf("No abnormal tests found.\n");
+    }
+}
+
+void calculateAverage() {
+    printf("Average test values:\n");
+
+    // Variables to store total and count for each test
+    float totalHgb = 0, totalBgt = 0, totalLdl = 0, totalSystolic = 0, totalDiastolic = 0;
+    int countHgb = 0, countBgt = 0, countLdl = 0, countBpt = 0;
+
+    // Iterate through tests and accumulate values for each test type
+    for (int i = 0; i < testCount; i++) {
+        if (strcmp(medicalTests[i].testName, "Hgb") == 0) {
+            totalHgb += medicalTests[i].result;
+            countHgb++;
+        } else if (strcmp(medicalTests[i].testName, "BGT") == 0) {
+            totalBgt += medicalTests[i].result;
+            countBgt++;
+        } else if (strcmp(medicalTests[i].testName, "LDL") == 0) {
+            totalLdl += medicalTests[i].result;
+            countLdl++;
+        } else if (strcmp(medicalTests[i].testName, "BPT") == 0) {
+            // Assuming systolic and diastolic blood pressure are stored separately in the result field
+            float systolicBP = (int)medicalTests[i].result;
+            float diastolicBP = medicalTests[i].result - systolicBP;
+            totalSystolic += systolicBP;
+            totalDiastolic += diastolicBP;
+            countBpt++;
+        }
+    }
+
+    // Calculate average for each test type
+    if (countHgb > 0) {
+        printf("Hgb: %.2f\n", totalHgb / countHgb);
+    }
+    if (countBgt > 0) {
+        printf("BGT: %.2f\n", totalBgt / countBgt);
+    }
+    if (countLdl > 0) {
+        printf("LDL: %.2f\n", totalLdl / countLdl);
+    }
+    if (countBpt > 0) {
+        float avgSystolic = totalSystolic / countBpt;
+        float avgDiastolic = totalDiastolic / countBpt;
+        printf("BPT: Systolic: %.2f, Diastolic: %.2f\n", avgSystolic, avgDiastolic);
+    }
+}
+
+void updateTestResult() {
+    int patientID;
+    int choice;
+    printf("Enter patient ID (7 digits): ");
+    if (scanf("%d", &patientID) != 1 || patientID < 1000000 || patientID > 9999999) {
+        printf("Error: Invalid patient ID. Please enter a 7-digit number.\n");
+        // Clear input buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    printf("Choose the test to update:\n");
+    printf("1. Hemoglobin (Hgb)\n");
+    printf("2. Blood Glucose Test (BGT)\n");
+    printf("3. LDL Cholesterol Low-Density Lipoprotein (LDL)\n");
+    printf("4. Blood Pressure Test (BPT)\n");
+    printf("Enter your choice: ");
+    scanf("%d", &choice);
+
+    char testName[50];
+    switch (choice) {
+        case 1:
+            strcpy(testName, "Hgb");
+            break;
+        case 2:
+            strcpy(testName, "BGT");
+            break;
+        case 3:
+            strcpy(testName, "LDL");
+            break;
+        case 4:
+            strcpy(testName, "BPT");
+            break;
+        default:
+            printf("Invalid choice.\n");
+            return;
+    }
+
+    float newResult;
+    printf("Enter new test result: ");
+    scanf("%f", &newResult);
+
+    int found = 0;
+    for (int i = 0; i < testCount; i++) {
+        if (medicalTests[i].patientID == patientID && strcmp(medicalTests[i].testName, testName) == 0) {
+            medicalTests[i].result = newResult;
+            printf("Test result updated successfully.\n");
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) {
+        printf("No test found for patient ID %d with the selected test.\n", patientID);
+    }
+    writeTestDataToFile();
+}
+
+void deleteTest() {
+    int patientID;
+    int choice;
+    printf("Enter patient ID (7 digits): ");
+    if (scanf("%d", &patientID) != 1 || patientID < 1000000 || patientID > 9999999) {
+        printf("Error: Invalid patient ID. Please enter a 7-digit number.\n");
+        // Clear input buffer
+        while (getchar() != '\n');
+        return;
+    }
+
+    printf("Choose the test to delete:\n");
+    printf("1. Hemoglobin (Hgb)\n");
+    printf("2. Blood Glucose Test (BGT)\n");
+    printf("3. LDL Cholesterol Low-Density Lipoprotein (LDL)\n");
+    printf("4. Blood Pressure Test (BPT)\n");
+    printf("Enter your choice: ");
+    scanf("%d", &choice);
+
+    char testName[50];
+    switch (choice) {
+        case 1:
+            strcpy(testName, "Hgb");
+            break;
+        case 2:
+            strcpy(testName, "BGT");
+            break;
+        case 3:
+            strcpy(testName, "LDL");
+            break;
+        case 4:
+            strcpy(testName, "BPT");
+            break;
+        default:
+            printf("Invalid choice.\n");
+            return;
+    }
+
+    int found = 0;
+    for (int i = 0; i < testCount; i++) {
+        if (medicalTests[i].patientID == patientID && strcmp(medicalTests[i].testName, testName) == 0) {
+            // Shift elements to remove the test
+            for (int j = i; j < testCount - 1; j++) {
+                medicalTests[j] = medicalTests[j + 1];
+            }
+            testCount--;
+            printf("Test deleted successfully.\n");
+            found = 1;
+            break;
+        }
+    }
+
+    if (!found) {
+        printf("No test found for patient ID %d with the selected test.\n", patientID);
+    }
+    writeTestDataToFile();
+}
+
+void displayAllTests() {
+    printf("All Medical Tests:\n");
+    for (int i = 0; i < testCount; i++) {
+        printf("Patient ID: %d, Test Name: %s, Test Date: %s, Result: %.2f\n",
+               medicalTests[i].patientID, medicalTests[i].testName, medicalTests[i].testDate, medicalTests[i].result);
+    }
+}

@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1714472751 source:c:\users\hp\desktop\c\1\porjectarc\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+

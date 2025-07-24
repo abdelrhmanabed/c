@@ -1,0 +1,20 @@
+
+1- postfix: 3 5 10 2 - * +
+ 
+1- result: 43
+
+
+2- postfix: 1 1 + 1 + 1 8 * +
+ 
+2- result: 11
+
+
+3- postfix: 100 3 / 2 /
+ 
+3- result: 16
+
+
+4- postfix: 100 3 %
+ 
+4- result: 1
+

@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1609001142 source:c:\users\hp\desktop\c\array parlal\main.c
+	<stdio.h>
+	<stdlib.h>
+

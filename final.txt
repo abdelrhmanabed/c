@@ -1,0 +1,243 @@
+// Abdelrhman Abed / 1193191 /section 1
+// Dr. Ahmad Abusnaina
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+typedef struct {  // structure is similar to an object that will hod 40 strings
+    int top;     //  variable tells us where the last string
+    char buckts [40][40];  //is an array of buckets
+} Stack;
+
+typedef struct binary_tree_node { // this structure specifies a binary tree pointing to the left and right children
+    char data[40];
+    struct binary_tree_node *left;
+    struct binary_tree_node *right;
+} binary_tree_node;
+
+void push(Stack *stack, char *item) { // adds an item to the top of the stack
+    if (stack->top == 40 - 1) {
+        printf("stack overflow\n");
+        exit(1);
+    }
+    strcpy(stack->buckts [++stack->top], item);
+}
+
+char* pop(Stack *stack) {            // removes and returns the item from top of the stack
+    if (stack->top == -1) {
+        printf("stack underflow\n");
+        exit(1);
+    }
+    return stack->buckts [stack->top--];
+}
+
+int is_empty(Stack *stack) {      // checks if the stack empty
+    return stack->top == -1;
+}
+
+int operator(char c) {           // checks if a character is an operator
+    return (c == '+' || c == '-' || c == '*' || c == '/' || c == '%');
+}
+
+int priority(char c) {          // determines the priority of an operator
+    return (c == '+' || c == '-') ? 1 : ((c == '*' || c == '/' || c == '%') ? 2 : 0);
+}
+
+void spilt_postfix(char *postfix, char splitpostfix[40][40], int *size) {  // the function takes a postfix expression as input
+    char *token = strtok(postfix, " ");                                   //  and splits it into tokens
+    int index = 0;                                                       //   postfix:input postfix expression
+    while (token) {                                                     //    spit_postfix:array yo store the spliy tokens
+        strcpy(splitpostfix[index++], token);                          //     size : pointer to an integer that will store the size
+        token = strtok(NULL, " ");
+    }
+    *size = index;
+}
+
+void infix_to_postfix(char *infix, char *postfix) {  //converts an infix expression to postfix
+    Stack stack = { .top = -1 };
+    int i, j = 0;
+
+    for (i = 0; infix[i]; i++) {   // loop through each character in the infix
+        char c = infix[i];
+        if (isspace(c)) continue;  // copy the entire number to the postfix
+        else if (isdigit(c)) {    //  pop operator form the stack
+            while (isdigit(infix[i])) postfix[j++] = infix[i++];
+            i--;
+            postfix[j++] = ' ';                       // if the stack empty of the top operator has lower precedence
+        } else if (operator(c)) {
+            while (!is_empty(&stack) && priority(stack.buckts [stack.top][0]) >= priority(c)) {
+                postfix[j++] = stack.buckts [stack.top][0];
+                postfix[j++] = ' ';
+                pop(&stack);
+            }
+            char op[2] = {c, '\0'};    // push it onto the stack
+            push(&stack, op);
+        } else if (c == '(') {
+            push(&stack, (char[]){c, '\0'});   // pop operators from the stack to the postfix
+        } else if (c == ')') {
+            while (!is_empty(&stack) && stack.buckts [stack.top][0] != '(') {
+                postfix[j++] = stack.buckts [stack.top][0];
+                postfix[j++] = ' ';
+                pop(&stack);              // after processing all characters pop any remaining operators form th stack
+            }
+            pop(&stack);
+        }
+    }
+
+    while (!is_empty(&stack)) {
+        postfix[j++] = stack.buckts [stack.top][0];
+        postfix[j++] = ' ';
+        pop(&stack);
+    }
+    postfix[j > 0 && postfix[j - 1] == ' ' ? j - 1 : j] = '\0';
+}
+
+binary_tree_node* new_node(char *data) {       // creates a new binary tree node and initializes it with the provided data
+    binary_tree_node *temp = (binary_tree_node *)malloc(sizeof(binary_tree_node));
+    strcpy(temp->data, data);
+    temp->left = temp->right = NULL;
+    return temp;                             // a pointer to the newly created binary tree node
+}                                           // these it work together in the context of parsing expression
+                                           //  and converting them to postfix and creating nodes for a binary expression tree
+binary_tree_node* constructTree(char postfix[][40], int size) {
+    binary_tree_node *stack[40];                                     // builds a binary expression tree form postfix expression
+    int stacktop = -1;                                              //  token in the postfix expression
+                                                                   //   creates a new node for it and pushes it onto the stack
+    for (int i = 0; i < size; i++) {                              //    it pops two nodes from stack
+        binary_tree_node *t = new_node(postfix[i]);              //     the stack is the root of the binary tree , returns the root of the binary tree
+        if (!operator(postfix[i][0]) || strlen(postfix[i]) > 1) stack[++stacktop] = t;
+        else { t->right = stack[stacktop--]; t->left = stack[stacktop--]; stack[++stacktop] = t; }
+    }
+    return stack[stacktop];
+}
+
+int evaluate_tree(binary_tree_node *root) {                             // evaluates the result of a binary expression tree
+    if (!root) return 0;                                               //  root of the binary tree
+    if (!root->left && !root->right) return atoi(root->data);         //  recursively evaluates binary tree
+                                                                     //   it coverts the data to an integer and returns it
+    int left_valu = evaluate_tree(root->left);                      //    it evaluates the left and right subtrees and preforms the corresponding operation
+    int right_valu = evaluate_tree(root->right);                   //     returns final operation
+
+    switch (root->data[0]) {
+        case '-': return left_valu - right_valu;
+        case '+': return left_valu + right_valu;
+        case '/': return right_valu != 0 ? left_valu / right_valu : 0;
+        case '*': return left_valu * right_valu;
+        case '%': return right_valu != 0 ? left_valu % right_valu : 0;
+    }
+    return 0;
+}
+
+void readFromFile(char *filename, char expressions[][40], int *num_exp) {        // reads expressions form a file into an array
+    FILE *file = fopen(filename, "r");                                           //opens the specified file for reading '
+                                                                                // reading expressions line by kine form the file
+    if (!file) {                                                               // num_exp: variable for each expression red
+        printf("error opening file: %s\n", filename);
+        exit(1);                                                              // closes the file
+    }
+
+    *num_exp = 0;
+    while (fscanf(file, " %[^\n]s", expressions[*num_exp]) != EOF) (*num_exp)++;
+    fclose(file);
+}
+
+void freeTree(binary_tree_node *root) {                //free memory allocated for the binary tree nodes
+    if (root) {                                       // the binary tree in post order (left , right , root)
+        freeTree(root->left);
+        freeTree(root->right);                       // ensures all allocated memory is released
+        free(root);
+    }
+}
+
+void saveToFile(char expressions[][40], int num_exp, char *filename) {  // saves postfix expressions and their results
+    FILE *file = fopen(filename, "w");
+    if (!file) {                                                        // open the specified file for writing
+        printf("error opening file to write: %s\n", filename);         //  save results and postfix expressions
+        return;
+    }                                                                 // close file
+
+    for (int i = 0; i < num_exp; i++) {                              // print a message indicating that the results have been saved
+
+        char postfixExpr[40] = "";
+        infix_to_postfix(expressions[i], postfixExpr);
+
+        char splitpostfix[40][40];
+        int postfixSize;
+        fprintf(file, "\n%d- postfix: %s\n", i+1 ,postfixExpr);
+
+        spilt_postfix(postfixExpr, splitpostfix, &postfixSize);
+
+        binary_tree_node *root = constructTree(splitpostfix, postfixSize);
+        int result = evaluate_tree(root);
+
+        fprintf(file, " \n%d- result: %d\n\n", i+1 ,result);
+
+        freeTree(root);
+    }
+
+    fclose(file);
+    printf("results saved to %s\n", filename);
+}
+
+
+int main() {
+    char expressions[100][40];   // arrays to store up to 100 expressions and 40 charactes
+    int num_exp = 0;
+    int choice = 0;
+
+    while (choice != 6) {                      // the program enters a loop form that continues unit the user selects 6 to exit
+        printf("\nMenu\n");
+        printf("1. Read	equations\n");
+        printf("2. Print equations\n");          //this information from the project requirements
+        printf("3. Evaluate	using Expression tree\n");
+        printf("4. Print postfix expressions\n");
+        printf("5. Save	to output file (postfix and results)\n");
+        printf("6. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                readFromFile("input.txt", expressions, &num_exp); // read expressions from the input.txt file
+                printf("expressions read from file.\n");         // print message
+                break;
+            case 2:
+                for (int i = 0; i < num_exp; i++) printf("%d- %s\n", i + 1, expressions[i]);
+                break;   // print the stored expressions in the 'expressions' array
+            case 3:
+                for (int i = 0; i < num_exp; i++) {
+                    char postfixExpr[40] = "";               // converts infix to postfix
+                    infix_to_postfix(expressions[i], postfixExpr);
+
+                    char splitpostfix[40][40];                // binary expression tree from the postfix expressions
+                    int postfixSize;
+                    spilt_postfix(postfixExpr, splitpostfix, &postfixSize);  // evaluates the result
+
+                    binary_tree_node *root = constructTree(splitpostfix, postfixSize);
+                    printf("result %d: %d\n", i+1,  evaluate_tree(root));             // print result
+
+                    freeTree(root);
+                }
+                break;
+            case 4:
+                for (int i = 0; i < num_exp; i++) {             // converts infix to postfix  and print all result
+                    char postfixExpr[40] = "";
+                    infix_to_postfix(expressions[i], postfixExpr);
+                    printf("postfix %d: %s\n", i + 1, postfixExpr);
+                }
+                break;
+            case 5:
+                saveToFile(expressions, num_exp, "output.txt");  // save postfix expressions and the result to the output.txt
+                break;
+            case 6:
+                printf("exiting program.\n");
+                break;
+            default:
+                printf("not correct choice . try again.\n");  // when enter number another 1 - 6 print this message
+                break;
+        }
+    }
+
+    return 0;
+}

@@ -1,0 +1,6 @@
+neymar:ahmad#subih#khaled
+Word:Meaning1#Meaning2#Meaning3
+abood:ody#ody#ody
+good:fine#excellent#great
+good:##
+good:fine#Meaning1

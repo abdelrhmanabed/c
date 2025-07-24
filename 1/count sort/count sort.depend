@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1706649879 source:c:\users\hp\desktop\c\1\count sort\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
